@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>万年历 · 八字排盘</title>
+<style>
+  :root {
+    --bg: #f7f6f3; --card: #ffffff; --ink: #1f1f1f; --muted: #9a9890; --line: #ebe9e4;
+    --accent: #b23a2e; --accent-soft: #f6e9e7;
+    --mu: #3d8b57; --huo: #c8432f; --tu: #9c7034; --jin: #b38a1d; --shui: #2e6aa8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 24px 40px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: 2px; margin: 0; }
+  header h1 span { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .grid { display: grid; grid-template-columns: 440px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border-radius: 14px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+
+  /* 日历 */
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .nav .title { font-size: 20px; font-weight: 600; }
+  .nav .title small { font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .nav .btns { display: flex; gap: 4px; }
+  .nav button { width: 32px; height: 32px; border-radius: 8px; font-size: 16px; color: #555; }
+  .nav button:hover { background: var(--bg); }
+  .nav button.today { width: auto; padding: 0 10px; font-size: 13px; }
+  .week, .days { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .week div { text-align: center; font-size: 12px; color: var(--muted); padding: 6px 0; }
+  .week div:first-child, .week div:last-child { color: var(--accent); }
+  .day { position: relative; aspect-ratio: 1 / 1.05; border-radius: 10px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1px; transition: background .12s; }
+  .day:hover { background: var(--bg); }
+  .day .n { font-size: 17px; font-weight: 500; line-height: 1.2; }
+  .day .l { font-size: 11px; color: var(--muted); }
+  .day .g { font-size: 10px; color: #c4c2bb; }
+  .day.other { opacity: .35; }
+  .day.wkd .n { color: var(--accent); }
+  .day .l.jq { color: var(--shui); }
+  .day .l.fest { color: var(--accent); }
+  .day.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .day.sel { background: var(--accent); }
+  .day.sel .n, .day.sel .l, .day.sel .g { color: #fff !important; }
+  .day .dot { position: absolute; top: 6px; right: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  .day.sel .dot { background: #fff; }
+
+  /* 时辰 */
+  .label { font-size: 12px; color: var(--muted); letter-spacing: 1px; margin: 18px 0 8px; }
+  .shichen { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .shichen button { padding: 7px 0 5px; border-radius: 8px; background: var(--bg); line-height: 1.1; }
+  .shichen button b { display: block; font-size: 15px; font-weight: 500; }
+  .shichen button i { font-style: normal; font-size: 10px; color: var(--muted); }
+  .shichen button.on { background: var(--ink); color: #fff; }
+  .shichen button.on i { color: #bbb; }
+
+  textarea { width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; font: inherit; font-size: 14px; line-height: 1.6; background: #fcfcfb; outline: none; }
+  textarea:focus { border-color: #d6d3cc; background: #fff; }
+  .notefoot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .notefoot button { font-size: 12px; color: var(--muted); }
+  .notefoot button:hover { color: var(--ink); }
+
+  /* 详情 */
+  .head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .head .big { font-size: 44px; font-weight: 600; line-height: 1; }
+  .head .meta div:first-child { font-size: 15px; }
+  .head .meta div:last-child { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .head .tags { margin-left: auto; display: flex; gap: 6px; }
+  .pill { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: var(--bg); color: #555; }
+  .pill.red { background: var(--accent-soft); color: var(--accent); }
+
+  table.pz { width: 100%; border-collapse: collapse; margin-top: 8px; table-layout: fixed; }
+  table.pz th { font-weight: 400; font-size: 12px; color: var(--muted); padding: 12px 0 6px; }
+  table.pz td { text-align: center; padding: 7px 4px; border-top: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+  table.pz td.rh { width: 64px; text-align: left; color: var(--muted); font-size: 12px; padding-top: 9px; }
+  table.pz tr.gz td { font-size: 30px; font-weight: 500; padding: 4px; border-top: 0; line-height: 1.25; }
+  table.pz tr.gz td.rh { font-size: 12px; font-weight: 400; padding-top: 14px; }
+  table.pz tr.tg td { border-top: 1px solid var(--line); }
+  table.pz .cg { display: block; line-height: 1.7; }
+  table.pz .cg em { font-style: normal; color: var(--muted); font-size: 11px; margin-left: 3px; }
+  table.pz .spc { background: var(--bg); }
+  table.pz th.spc { color: var(--ink); border-radius: 10px 10px 0 0; }
+  table.pz .ss { display: block; font-size: 12px; line-height: 1.75; color: #555; }
+  .mu { color: var(--mu); } .huo { color: var(--huo); } .tu { color: var(--tu); } .jin { color: var(--jin); } .shui { color: var(--shui); }
+  .dm { font-size: 11px; color: var(--accent); }
+  .tog { font-size: 14px; font-weight: 500; padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--ink); background: var(--ink); color: #fff; white-space: nowrap; }
+  .tog:hover { opacity: .85; }
+  .tog.off { background: #fff; color: var(--accent); border-color: var(--accent); }
+
+  .info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+  @media (max-width: 700px) { .info { grid-template-columns: 1fr; } }
+  .box { background: var(--bg); border-radius: 10px; padding: 12px 14px; }
+  .box h4 { margin: 0 0 6px; font-size: 12px; font-weight: 400; color: var(--muted); letter-spacing: 1px; }
+  .box .v { font-size: 13px; line-height: 1.8; }
+  .box .none { color: #c4c2bb; }
+  .box .it { white-space: nowrap; }  /* 每一项不拆行 */
+  .box .it .src { font-size: 50%; color: var(--muted); margin-left: 4px; }
+  .tg-box h4, .dz-box h4 { font-size: 24px; margin-bottom: 10px; }  /* 天干留意、地支留意：字号 2 倍 */
+  .tg-box .v, .dz-box .v { font-size: 26px; line-height: 1.6; overflow-wrap: anywhere; }
+  .cg-box { margin-top: 12px; display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: center; }
+  .cg-box .w { font-size: 26px; font-weight: 600; color: var(--accent); text-align: center; }
+  .cg-box .w small { display: block; font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: 1px; }
+  .cg-box p { margin: 2px 0; font-size: 13px; line-height: 1.8; }
+  .cg-box p b { font-weight: 500; color: var(--muted); margin-right: 6px; }
+  footer { text-align: center; font-size: 11px; color: #c4c2bb; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>万年历<span>八字排盘</span></h1>
+  </header>
+  <div class="grid">
+    <section class="card">
+      <div class="nav">
+        <div class="title" id="title"></div>
+        <div class="btns">
+          <button id="prevY" title="上一年">«</button>
+          <button id="prev" title="上个月">‹</button>
+          <button id="today" class="today">今天</button>
+          <button id="next" title="下个月">›</button>
+          <button id="nextY" title="下一年">»</button>
+        </div>
+      </div>
+      <div class="week"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div>
+      <div class="days" id="days"></div>
+
+      <div class="label">时辰</div>
+      <div class="shichen" id="shichen"></div>
+
+      <div class="label">备注</div>
+      <textarea id="note" placeholder="记录当日的推算、心得……（自动保存）"></textarea>
+      <div class="notefoot">
+        <span id="saved"></span>
+        <span><button id="exp">导出</button> · <button id="imp">导入</button></span>
+      </div>
+      <input type="file" id="file" accept=".json" hidden>
+    </section>
+
+    <section class="card" id="detail"></section>
+  </div>
+  <footer>本地计算 · 北京时间 · 1901–2099</footer>
+</div>
+
+<script src="chenggu.js"></script>
+<script src="bazi.js"></script>
+<script>
+(function () {
+  var WEEK = '日一二三四五六';
+  var CN = '〇一二三四五六七八九';
+  var NOTE_KEY = 'wnl-notes', HOUR_KEY = 'wnl-show-hour';
+  var showHour = localStorage.getItem(HOUR_KEY) !== '0';  // 时柱显示开关，默认显示，记住上次选择
+  var now = new Date();
+  var S = { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate(), sc: Math.floor((now.getHours() + 1) / 2) % 12 };
+  var notes = {};
+  try { notes = JSON.parse(localStorage.getItem(NOTE_KEY) || '{}'); } catch (e) {}
+
+  function $(id) { return document.getElementById(id); }
+  function key(y, m, d) { return y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function clampYear() { if (S.y < 1901) S.y = 1901; if (S.y > 2099) S.y = 2099; }
+  function daysIn(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+
+  function renderCalendar() {
+    var L = Bazi.lunar(S.y, S.m, 15);
+    $('title').innerHTML = S.y + '年' + S.m + '月<small>' + L.yearGz + '年 · ' + L.shengxiao + '</small>';
+    var first = new Date(Date.UTC(S.y, S.m - 1, 1)).getUTCDay();
+    var total = Math.ceil((first + daysIn(S.y, S.m)) / 7) * 7;
+    var t = new Date(), ty = t.getFullYear(), tm = t.getMonth() + 1, td = t.getDate();
+    var html = '';
+    for (var i = 0; i < total; i++) {
+      var dt = new Date(Date.UTC(S.y, S.m - 1, 1 - first + i));
+      var y = dt.getUTCFullYear(), m = dt.getUTCMonth() + 1, d = dt.getUTCDate();
+      if (y < 1901 || y > 2099) { html += '<div></div>'; continue; }
+      var info = Bazi.dayInfo(y, m, d), cls = 'day', lab, lc = 'l';
+      if (info.festival) { lab = info.festival; lc += ' fest'; }
+      else if (info.jieqi) { lab = info.jieqi.name; lc += ' jq'; }
+      else if (info.solarFest) { lab = info.solarFest; lc += ' fest'; }
+      else lab = info.lunar.day === 1 ? info.lunar.monthCn : info.lunar.dayCn;
+      if (m !== S.m) cls += ' other';
+      if (dt.getUTCDay() === 0 || dt.getUTCDay() === 6) cls += ' wkd';
+      if (y === ty && m === tm && d === td) cls += ' today';
+      if (y === S.y && m === S.m && d === S.d) cls += ' sel';
+      html += '<button class="' + cls + '" data-d="' + y + ',' + m + ',' + d + '">' +
+        (notes[key(y, m, d)] ? '<span class="dot"></span>' : '') +
+        '<span class="n">' + d + '</span><span class="' + lc + '">' + lab + '</span><span class="g">' + info.rgz + '</span></button>';
+    }
+    $('days').innerHTML = html;
+  }
+
+  function renderShichen() {
+    var html = '';
+    for (var i = 0; i < 12; i++) html += '<button data-i="' + i + '" class="' + (i === S.sc ? 'on' : '') + '"><b>' + Bazi.SHICHEN[i] + '</b><i>' + Bazi.SHICHEN_RANGE[i] + '</i></button>';
+    $('shichen').innerHTML = html;
+  }
+
+  function cnWeight(w) {
+    var l = Math.floor(w / 10), q = w % 10;
+    return CN[l] + '两' + (q ? CN[q] + '钱' : '');
+  }
+  function wx(it, cls) { return '<span class="' + it.color + (cls ? ' ' + cls : '') + '">' + it.text + '</span>'; }
+  function list(a) { return a.length ? a.map(function (x) { return '<span class="it">' + esc(x).replace(/（(.+?)）$/, '<small class="src">$1</small>') + '</span>'; }).join('　') : '<span class="none">无</span>'; }
+
+  function renderDetail() {
+    var info = Bazi.dayInfo(S.y, S.m, S.d);
+    var r = Bazi.eightChar(S.y, S.m, S.d, Bazi.SHICHEN_HOUR[S.sc], 1);
+    var L = info.lunar, wd = WEEK[new Date(Date.UTC(S.y, S.m - 1, S.d)).getUTCDay()];
+    var tags = '';
+    if (info.festival) tags += '<span class="pill red">' + info.festival + '</span>';
+    if (info.solarFest) tags += '<span class="pill red">' + info.solarFest + '</span>';
+    if (info.jieqi) tags += '<span class="pill">' + info.jieqi.name + ' ' + info.jieqi.time + '</span>';
+    var cols = showHour ? ['年柱', '月柱', '日柱', '时柱'] : ['年柱', '月柱', '日柱'];
+    var cut = function (a) { return showHour ? a : a.slice(0, 3); };
+    // 24气节 天干：书中 p.073「天干在一年中的实际分布日数」（每节按30日计），取当日正午
+    var spd = Bazi.siling(S.y, S.m, S.d, 12, 0);
+    var special = function () { return '<span class="' + spd.gan.color + '" title="' + spd.jie + '后第' + spd.day + '日 · ' + spd.plan + '">' + spd.gan.text + '</span>'; };
+    var SP = function (c) { return '<td class="spc">' + (c || '') + '</td>'; };
+    var h = '<div class="head"><div class="big">' + S.d + '</div><div class="meta">' +
+      '<div>' + S.y + '年' + S.m + '月' + S.d + '日 星期' + wd + ' · ' + Bazi.SHICHEN[S.sc] + '时</div>' +
+      '<div>农历' + L.yearCn + '年 ' + L.monthCn + L.dayCn + ' · ' + L.yearGz + L.shengxiao + '年</div></div>' +
+      '<div class="tags">' + tags + '<button class="tog' + (showHour ? '' : ' off') + '" id="togHour" title="显示/隐藏时柱">' + (showHour ? '◉ 时柱：显示中' : '○ 时柱：已隐藏') + '</button></div></div>';
+
+    h += '<table class="pz"><tr><th></th><th class="spc">24气节</th>' + cols.map(function (c) { return '<th>' + c + '</th>'; }).join('') + '</tr>';
+    h += '<tr><td class="rh">十神</td>' + SP() + cut(r.tiangan).map(function (t, k) { return '<td>' + (k === 2 ? '<span class="dm">日主</span>' : t.shishen) + '</td>'; }).join('') + '</tr>';
+    h += '<tr class="gz tg"><td class="rh">天干</td>' + SP(special()) + cut(r.tiangan).map(function (t) { return '<td>' + wx(t) + '</td>'; }).join('') + '</tr>';
+    h += '<tr class="gz"><td class="rh">地支</td>' + SP() + cut(r.dizhi).map(function (z) { return '<td>' + wx(z) + '</td>'; }).join('') + '</tr>';
+    h += '<tr><td class="rh">藏干</td>' + SP() + cut(r.dizhi).map(function (z) {
+      return '<td>' + z.canggan.map(function (c) { return '<span class="cg">' + wx(c) + '<em>' + c.shishen + '</em></span>'; }).join('') + '</td>';
+    }).join('') + '</tr>';
+    h += '<tr><td class="rh">纳音</td>' + SP() + cut(r.nayin).map(function (n) { return '<td>' + n + '</td>'; }).join('') + '</tr>';
+    h += '<tr><td class="rh">空亡</td>' + SP() + cut(r.kongwang).map(function (n) { return '<td>' + n + '</td>'; }).join('') + '</tr></table>';
+
+    h += '<div class="info">' +
+      '<div class="box tg-box"><h4>天干留意</h4><div class="v">' + list((showHour ? r.tianganhechong : r.tianganhechong3).concat(Bazi.ganRelWith(spd.gan.text, cut(r.tiangan).map(function (t) { return t.text; }), ['年', '月', '日', '时'], '24气节'))) + '</div></div>' +
+      '<div class="box dz-box"><h4>地支留意</h4><div class="v">' + list(showHour ? r.dizhihechong : r.dizhihechong3) + '</div></div></div>';
+
+    $('detail').innerHTML = h;
+  }
+
+  function renderNote() {
+    $('note').value = notes[key(S.y, S.m, S.d)] || '';
+    $('saved').textContent = '';
+  }
+  function renderAll() { clampYear(); if (S.d > daysIn(S.y, S.m)) S.d = daysIn(S.y, S.m); renderCalendar(); renderShichen(); renderDetail(); renderNote(); }
+
+  function shiftMonth(n) { var t = new Date(Date.UTC(S.y, S.m - 1 + n, 1)); S.y = t.getUTCFullYear(); S.m = t.getUTCMonth() + 1; renderAll(); }
+  $('prev').onclick = function () { shiftMonth(-1); };
+  $('next').onclick = function () { shiftMonth(1); };
+  $('prevY').onclick = function () { shiftMonth(-12); };
+  $('nextY').onclick = function () { shiftMonth(12); };
+  $('today').onclick = function () { var t = new Date(); S.y = t.getFullYear(); S.m = t.getMonth() + 1; S.d = t.getDate(); renderAll(); };
+  $('days').onclick = function (e) {
+    var b = e.target.closest('.day'); if (!b) return;
+    var p = b.dataset.d.split(',').map(Number); S.y = p[0]; S.m = p[1]; S.d = p[2]; renderAll();
+  };
+  $('detail').onclick = function (e) {
+    if (!e.target.closest('#togHour')) return;
+    showHour = !showHour; localStorage.setItem(HOUR_KEY, showHour ? '1' : '0'); renderDetail();
+  };
+  $('shichen').onclick = function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    S.sc = +b.dataset.i; renderShichen(); renderDetail();
+  };
+  document.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'TEXTAREA') return;
+    var step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    var t = new Date(Date.UTC(S.y, S.m - 1, S.d + step)); S.y = t.getUTCFullYear(); S.m = t.getUTCMonth() + 1; S.d = t.getUTCDate(); renderAll();
+  });
+
+  var timer;
+  $('note').oninput = function () {
+    var k = key(S.y, S.m, S.d), v = this.value;
+    if (v.trim()) notes[k] = v; else delete notes[k];
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      localStorage.setItem(NOTE_KEY, JSON.stringify(notes));
+      $('saved').textContent = '已保存';
+      renderCalendar();
+    }, 400);
+  };
+  $('exp').onclick = function () {
+    var blob = new Blob([JSON.stringify(notes, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = '万年历备注-' + key(now.getFullYear(), now.getMonth() + 1, now.getDate()) + '.json'; a.click();
+  };
+  $('imp').onclick = function () { $('file').click(); };
+  $('file').onchange = function () {
+    var f = this.files[0]; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var o = JSON.parse(rd.result), n = 0;
+        for (var k in o) if (/^\d{4}-\d{2}-\d{2}$/.test(k) && typeof o[k] === 'string') { notes[k] = o[k]; n++; }
+        localStorage.setItem(NOTE_KEY, JSON.stringify(notes)); renderAll(); $('saved').textContent = '已导入 ' + n + ' 条';
+      } catch (e) { alert('文件格式不正确'); }
+    };
+    rd.readAsText(f); this.value = '';
+  };
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
